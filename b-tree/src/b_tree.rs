@@ -2,28 +2,28 @@ use std::io;
 use std::fs::File;
 use std::path::Path;
 
-struct header_btree {
+struct HeaderBTree {
     status: u8,
-    no_raiz: i16,
-    prox_rrn: i16,
-    nro_nos: i16
+    no_raiz: i32,
+    prox_rrn: i32,
+    nro_nos: i32
 }
 
-struct key {
-    c: i16,
-    rrn: i16,
-    offset: i32
+struct Key {
+    c: i32,
+    rrn: i32,
+    offset: i64
 }
 
-struct node {
+struct Node {
     tipo_no: u8,
-    nro_chaves: u16,
-    key: key,
-    p: [i16; 5]
+    nro_chaves: i32,
+    key: Key,
+    p: [i32; 5]
 }
 
-fn initialize_btree_header() -> Box<header_btree>{
-    let mut b_header = Box::new(header_btree{
+fn initialize_btree_header() -> Box<HeaderBTree>{
+    let mut b_header = Box::new(HeaderBTree{
                                                 status: 0,
                                                 no_raiz: -1,
                                                 prox_rrn: 0,

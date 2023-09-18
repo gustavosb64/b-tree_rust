@@ -3,6 +3,7 @@ use std::path::Path;
 use std::fs::File;
 
 mod b_tree;
+mod records;
 
 fn readline() -> String{
     
@@ -34,7 +35,13 @@ fn create_index_btree(v_input: Vec<&str>) -> Result<File, io::Error> {
     // Attempts to open the designated file
     let file_bin_r = File::open(&filename_bin)?;
 
+    let _ = records::read_all_reg_from_bin(filename_bin, f_type);
+
     let _ = b_tree::write_btree_file_from_bin(&file_bin_r, filename_btree, f_type);
+
+
+
+//    let _ = read_header_from_bin(file_bin_r, f_type)
 
     Ok(file_bin_r)
 }
