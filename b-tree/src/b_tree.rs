@@ -35,10 +35,7 @@ fn initialize_btree_header() -> Box<HeaderBTree>{
 
 pub fn write_btree_file_from_bin(file_bin_r: &File, filename_btree: &Path, f_type: u8) -> Result<bool, io::Error> {
 
-    println!("Still testing");
-
     let file_btree_wr = File::open(filename_btree)?;
-
     let mut b_header = initialize_btree_header();
 
     Ok(true)

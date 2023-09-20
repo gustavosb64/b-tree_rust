@@ -37,7 +37,7 @@ fn create_index_btree(v_input: Vec<&str>) -> Result<File, io::Error> {
 
     let _ = records::read_all_reg_from_bin(filename_bin, f_type);
 
-    let _ = b_tree::write_btree_file_from_bin(&file_bin_r, filename_btree, f_type);
+//    let _ = b_tree::write_btree_file_from_bin(&file_bin_r, filename_btree, f_type);
 
 
 

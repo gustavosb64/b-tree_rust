@@ -22,15 +22,15 @@ struct Vehicle {
     id: i32,
     ano: i32,
     tam_cidade: i32,
-    codC5: i8,
+    codC5: char,
     cidade: String,
     qtt: i32,
     sigla: String,
     tam_marca: i32,
-    codC6: i8,
+    codC6: char,
     marca: String,
     tam_modelo: i32,
-    codC7: i8,
+    codC7: char,
     modelo: String
 }
 
@@ -45,13 +45,13 @@ fn initialize_vehicle() -> Vehicle {
         qtt: -1,
         sigla: "".to_string(),
         tam_cidade: 0,
-        codC5: -1,
+        codC5: 'I',
         cidade: "".to_string(),
         tam_marca: 0,
-        codC6: -1,
+        codC6: 'I',
         marca: "".to_string(),
         tam_modelo: 0,
-        codC7: -1,
+        codC7: 'I',
         modelo: "".to_string(),
     }
 }
@@ -75,6 +75,7 @@ fn print_vehicle_full(V: Vehicle, f_type: u8) {
     println!("tam_modelo: {}", V.tam_modelo);
     println!("Cod7: {}", V.codC7);
     println!("Modelo: {}", V.modelo);
+    println!("");
 
 }
 
@@ -93,7 +94,7 @@ fn read_header_from_bin(file: &File, f_type: u8)
     Ok(f_header)
 }
 
-fn read_reg_from_bin_type1(mut file_bin_r: File, V: &mut Vehicle, rrn: i32) -> Result<(), io::Error> {
+fn read_reg_from_bin_type1(mut file_bin_r: &File, V: &mut Vehicle, rrn: i32) -> Result<(), io::Error> {
 
     // Seek correct position for file pointer
     let pos_to_seek = MAX_RRN*rrn + HEADER_SIZE_TYPE1;
@@ -108,6 +109,7 @@ fn read_reg_from_bin_type1(mut file_bin_r: File, V: &mut Vehicle, rrn: i32) -> R
     let mut buf_c = [0_u8; 1];
     let mut buf_c_2 = [0_u8; 2];
     let mut buf_i32 = [0_u8; 4];
+    let mut buf_string: Vec<u8> = Vec::new();
 
     // Reads 'removido'
     reader.read_exact(&mut buf_c)?;
@@ -138,7 +140,87 @@ fn read_reg_from_bin_type1(mut file_bin_r: File, V: &mut Vehicle, rrn: i32) -> R
         Ok(string) => V.sigla = string.to_string(),
         Err(e) => return Ok(())
     };
+    
+    for i in 0..3 {
 
+        if byte_counter > MAX_RRN-5 { 
+            return Ok(()) 
+        };
+
+        // If it fails, then the file has reached its end
+        reader.seek(io::SeekFrom::Current(4 as i64))?;
+
+        reader.read_exact(&mut buf_c)?;
+        let mut aux_char = u8::from_le_bytes(buf_c) as char;
+
+        // Returns the pointer to the position before the integer
+        reader.seek(io::SeekFrom::Current(-5 as i64))?;
+
+        match aux_char {
+            
+            '0' => {
+                reader.read_exact(&mut buf_i32)?;
+                V.tam_cidade = i32::from_le_bytes(buf_i32); 
+
+                reader.read_exact(&mut buf_c)?;
+                V.codC5 = u8::from_le_bytes(buf_c) as char; 
+
+                // Reads 'cidade'
+                buf_string = vec![0; V.tam_cidade as usize];
+                reader.read_exact(&mut buf_string)?;
+                match std::str::from_utf8(&buf_string){
+                    Ok(string) => V.cidade = string.to_string(),
+                    Err(e) => return Ok(())
+                }
+
+                byte_counter += 1 + 4 + (V.cidade.len() as i32);
+            },
+
+            '1' => {
+                reader.read_exact(&mut buf_i32)?;
+                V.tam_marca = i32::from_le_bytes(buf_i32); 
+
+                reader.read_exact(&mut buf_c)?;
+                V.codC6 = u8::from_le_bytes(buf_c) as char; 
+
+                // Reads 'cidade'
+                buf_string = vec![0; V.tam_marca as usize];
+                reader.read_exact(&mut buf_string)?;
+                match std::str::from_utf8(&buf_string){
+                    Ok(string) => V.marca = string.to_string(),
+                    Err(e) => return Ok(())
+                }
+
+                byte_counter += 1 + 4 + (V.marca.len() as i32);
+            },
+
+            '2' => {
+                reader.read_exact(&mut buf_i32)?;
+                V.tam_modelo = i32::from_le_bytes(buf_i32); 
+
+                reader.read_exact(&mut buf_c)?;
+                V.codC7 = u8::from_le_bytes(buf_c) as char; 
+
+                // Reads 'cidade'
+                buf_string = vec![0; V.tam_modelo as usize];
+                reader.read_exact(&mut buf_string)?;
+                match std::str::from_utf8(&buf_string){
+                    Ok(string) => V.modelo = string.to_string(),
+                    Err(e) => return Ok(())
+                }
+
+                byte_counter += 1 + 4 + (V.modelo.len() as i32);
+            },
+
+            _ => (),
+
+        }
+            
+
+    };
+    /*
+    */
+        
 
     println!("removido: {}", V.removido as char);
     println!("prox_rrn: {}", V.rrn as i32);
@@ -146,6 +228,11 @@ fn read_reg_from_bin_type1(mut file_bin_r: File, V: &mut Vehicle, rrn: i32) -> R
     println!("ano: {}", V.ano as i32);
     println!("qtt: {}", V.qtt);
     println!("sigla: {}", V.sigla);
+    println!("cidade: {}", V.cidade);
+    println!("marca: {}", V.marca);
+    println!("modelo: {}", V.modelo);
+    println!("");
+
 
     Ok(())
 
@@ -158,18 +245,16 @@ pub fn read_all_reg_from_bin(filename_in_bin: &Path, f_type: u8) -> Result<(), i
     let mut V = initialize_vehicle();
 
     if f_type == 1{
-        
         let mut rrn = 0;
-        read_reg_from_bin_type1(file_bin_r, &mut V, rrn); 
+        loop {
+            match read_reg_from_bin_type1(&file_bin_r, &mut V, rrn) {
+                Ok(_) => {},
+                Err(e) => break,
+            };
 
-        /*
-        while (read_reg_from_bin_type1(file_bin_r, &V, rrn) != false){
-
+            rrn += 1;
         }
-        */
-
-    }
+    };
 
     Ok(())
-
 }
