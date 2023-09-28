@@ -21,7 +21,7 @@ fn readline() -> String{
 fn create_index_btree(v_input: Vec<&str>) -> Result<File, io::Error> {
 
     // Put input information in their respective variables
-    let mut f_type: u8 = 0;
+    let mut f_type: u8 = 1;
     match v_input[0] {
         "tipo1" => f_type = 1,
         "tipo2" => f_type = 2,
@@ -35,11 +35,13 @@ fn create_index_btree(v_input: Vec<&str>) -> Result<File, io::Error> {
     // Attempts to open the designated file
     let file_bin_r = File::open(&filename_bin)?;
 
-    let _ = records::read_all_reg_from_bin(filename_bin, f_type);
+//    let _ = records::read_all_reg_from_bin(filename_bin, f_type);
 
 //    let _ = b_tree::write_btree_file_from_bin(&file_bin_r, filename_btree, f_type);
-
-
+    match b_tree::write_btree_file_from_bin(&file_bin_r, filename_btree, f_type){
+        Ok(_) => println!("blablalb"),
+        Err(e) => println!("{}",e),
+    }
 
 //    let _ = read_header_from_bin(file_bin_r, f_type)
 

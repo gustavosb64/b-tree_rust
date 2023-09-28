@@ -5,7 +5,7 @@ use std::path::Path;
 static MAX_RRN: i32 = 97;
 static HEADER_SIZE_TYPE1: i32 = 182;
 
-struct FileHeader {
+pub struct FileHeader {
     status: char,
     rrn: i32,
     offset: i64,
@@ -14,7 +14,7 @@ struct FileHeader {
     nro_reg_rem: i32
 }
 
-struct Vehicle {
+pub struct Vehicle {
     removido: char,
     tamanho_registro: i32, //used only by type2
     rrn: i32,
@@ -34,7 +34,7 @@ struct Vehicle {
     modelo: String
 }
 
-fn initialize_vehicle() -> Vehicle {
+pub fn initialize_vehicle() -> Vehicle {
     Vehicle {
         removido: '0',
         tamanho_registro: -1,
@@ -79,7 +79,7 @@ fn print_vehicle_full(V: Vehicle, f_type: u8) {
 
 }
 
-fn read_header_from_bin(file: &File, f_type: u8)
+pub fn read_header_from_bin(file: &File, f_type: u8)
                 -> Result<Box<FileHeader>, io::Error> {
     
     let f_header = Box::new(FileHeader {
@@ -94,7 +94,33 @@ fn read_header_from_bin(file: &File, f_type: u8)
     Ok(f_header)
 }
 
-fn read_reg_from_bin_type1(mut file_bin_r: &File, V: &mut Vehicle, rrn: i32) -> Result<(), io::Error> {
+pub fn read_id_from_reg_type1(mut file_bin_r: &File, id: &mut i32, rrn: i32) -> Result<(), io::Error> {
+
+    // Seek correct position for file pointer
+    let pos_to_seek: i32 = MAX_RRN*rrn + HEADER_SIZE_TYPE1;
+    file_bin_r.seek(io::SeekFrom::Start(pos_to_seek as u64))?;
+    let mut reader = BufReader::new(file_bin_r);
+
+    let mut buf_c = [0_u8; 1];
+    let mut buf_i32 = [0_u8; 4];
+
+    // Checks if reg is removed
+    reader.read_exact(&mut buf_c)?;
+    let mut is_removed = u8::from_le_bytes(buf_c) as char;
+    if is_removed == '1'{
+        *id = -1;
+        return Ok(()); // if the register is removed, return
+    }
+
+    // Reads ID
+    reader.seek(io::SeekFrom::Current(4 as i64))?;
+    reader.read_exact(&mut buf_i32)?;
+    *id = i32::from_le_bytes(buf_i32);
+
+    Ok(())
+}
+
+pub fn read_reg_from_bin_type1(mut file_bin_r: &File, V: &mut Vehicle, rrn: i32) -> Result<(), io::Error> {
 
     // Seek correct position for file pointer
     let pos_to_seek = MAX_RRN*rrn + HEADER_SIZE_TYPE1;
@@ -244,7 +270,7 @@ pub fn read_all_reg_from_bin(filename_in_bin: &Path, f_type: u8) -> Result<(), i
 
     let mut V = initialize_vehicle();
 
-    if f_type == 1{
+    if f_type == 1 {
         let mut rrn = 0;
         loop {
             match read_reg_from_bin_type1(&file_bin_r, &mut V, rrn) {
