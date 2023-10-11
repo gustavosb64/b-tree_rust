@@ -1,7 +1,7 @@
 use std::io;
 use std::fs::File;
 use std::path::Path;
-use std::io::{self, BufReader, Read, Seek};
+//use std::io::{self, BufReader, Read, Seek};
 
 static NODE_SIZE_TYPE1: i32 = 45;
 
@@ -30,11 +30,12 @@ struct BTree {
 }
 
 
+/*
 impl BTree {
     
     pub fn read_header_from_btree(&mut self, file_btree_r: &File) -> Result<Box<BTree>, io::Error> {
         
-        file_bin_r.seek(io::SeekFrom::Start(pos_to_seek as u64))?;
+        file_btree_r.seek(io::SeekFrom::Start(pos_to_seek as u64))?;
         let mut reader = BufReader::new(file_btree_r);
         
         // creating buffers used for reading
@@ -48,14 +49,12 @@ impl BTree {
     //pub fn initialize_btree(&mut self, f_type: u8) -> Result<Box<Node>, io::Error> {
     pub fn initialize_btree(&mut self, f_type: u8) -> Result<(), io::Error> {
         
-        node = Box::new(Node);
+//        node = Box::new(Node);
 
         Ok(())
 
     }
 }
-
-/*
 
 impl BTree {
 

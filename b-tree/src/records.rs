@@ -79,10 +79,21 @@ fn print_vehicle_full(V: Vehicle, f_type: u8) {
 
 }
 
-pub fn read_header_from_bin(file: &File, f_type: u8)
+pub fn get_status_from_header(header: Box<FileHeader>) -> char {
+    return header.status;
+}
+
+pub fn print_header(f_header: &Box<FileHeader>, f_type: u8) {
+    println!("status: {}", f_header.status);
+    println!("rrn: {}", f_header.rrn);
+    println!("prox_rrn: {}", f_header.prox_rrn);
+    println!("nro_reg_rem: {}", f_header.nro_reg_rem);
+}
+
+pub fn read_header_from_bin(mut file_bin_r: &File, f_type: u8)
                 -> Result<Box<FileHeader>, io::Error> {
     
-    let f_header = Box::new(FileHeader {
+    let mut f_header = Box::new(FileHeader {
                                         status: '0',
                                         rrn: -1,
                                         offset: -1,
@@ -90,6 +101,34 @@ pub fn read_header_from_bin(file: &File, f_type: u8)
                                         prox_offset: 0,
                                         nro_reg_rem: 0
                                     });
+    
+    // Seek correct position for file pointer
+    file_bin_r.seek(io::SeekFrom::Start(0))?;
+    let mut reader = BufReader::new(file_bin_r);
+
+    // Creates buffers for reading
+    let mut buf_c = [0_u8; 1];
+    let mut buf_i32 = [0_u8; 4];
+
+    // Reads 'status'
+    reader.read_exact(&mut buf_c)?;
+    f_header.status = u8::from_le_bytes(buf_c) as char;
+
+    // Reads 'rrn' (topo)
+    reader.read_exact(&mut buf_i32)?;
+    f_header.rrn = i32::from_le_bytes(buf_i32);
+
+    // seeking position of new data
+    let size:u64 = (HEADER_SIZE_TYPE1 - 4 - 4) as u64; //sizeof(i32)
+    reader.seek(io::SeekFrom::Start(size))?;
+
+    // reading next rrn 
+    reader.read_exact(&mut buf_i32)?;
+    f_header.prox_rrn = i32::from_le_bytes(buf_i32);
+
+    // reading amount of removed records
+    reader.read_exact(&mut buf_i32)?;
+    f_header.nro_reg_rem = i32::from_le_bytes(buf_i32);
 
     Ok(f_header)
 }
