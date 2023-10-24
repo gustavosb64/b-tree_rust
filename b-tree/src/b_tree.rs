@@ -1,7 +1,6 @@
-use std::io;
 use std::fs::File;
 use std::path::Path;
-//use std::io::{self, BufReader, Read, Seek};
+use std::io::{self, BufReader, Read, Seek};
 
 static NODE_SIZE_TYPE1: i32 = 45;
 
@@ -9,6 +8,7 @@ static NODE_SIZE_TYPE1: i32 = 45;
  * mod records; */
 use super::records;
 
+#[derive(Copy, Clone, Debug)]
 struct Key {
     c: i32,
     rrn: i32,
@@ -16,125 +16,189 @@ struct Key {
 }
 
 struct Node {
-    tipo_no: u8,
+    tipo_no: char,
     nro_chaves: i32,
-    key: Key,
+    key: [Key; 4],
     p: [i32; 5]
 }
 
-struct BTree {
-    status: u8,
+pub struct BTree {
+    status: char,
     no_raiz: i32,
     prox_rrn: i32,
     nro_nos: i32
 }
 
+impl Default for Key {
+    fn default() -> Self {
+        let key = Key {
+                        c: -1, 
+                        rrn: -1, 
+                        offset: -1, 
+                      };
+        key
+    }
+}
 
-/*
+impl Default for Node {
+    fn default() -> Self {
+        let default_key:Key = Key::new();
+        let arr_keys: [Key; 4] = [default_key; 4];
+
+        let mut node = Node{ 
+                                tipo_no: '0',
+                                nro_chaves: 0,
+                                key: arr_keys, 
+                                p: [-1; 5]
+                            };
+        node
+    }
+}
+
+impl Key {
+
+    fn new() -> Self {
+        Default::default()
+    }
+
+    fn print(&mut self) {
+        println!("c: {}, rrn: {}, offset: {}", self.c, self.rrn, self.offset);
+    }
+
+}
+
+impl Node {
+
+    pub fn new() -> Node {
+        Default::default()
+    }
+
+    fn print(&mut self) {
+        println!("----------------------------");
+        println!("tipo_no: {}", self.tipo_no);
+        println!("nro_chaves: {}", self.nro_chaves);
+        println!("key: {:?}", self.key);
+        println!("P: {:?}", self.p);
+        println!("----------------------------");
+    }
+}
+
 impl BTree {
-    
-    pub fn read_header_from_btree(&mut self, file_btree_r: &File) -> Result<Box<BTree>, io::Error> {
-        
-        file_btree_r.seek(io::SeekFrom::Start(pos_to_seek as u64))?;
+
+    pub fn new(mut file_btree_r: &File) -> Result<BTree, io::Error> {
+        let mut b_tree = BTree{ 
+                                status: '1',
+                                no_raiz: -1,
+                                prox_rrn: -1,
+                                nro_nos: 0,
+                              };
+
+
+        file_btree_r.seek(io::SeekFrom::Start(0))?;
         let mut reader = BufReader::new(file_btree_r);
         
         // creating buffers used for reading
         let mut buf_c   = [0_u8; 1];
-        let mut buf_i32 = [0_u8; 0];
+        let mut buf_i32 = [0_u8; 4];
+
+        // reads status
+        reader.read_exact(&mut buf_c)?;
+        b_tree.status = u8::from_le_bytes(buf_c) as char;
+
+        // reads no_raiz
+        reader.read_exact(&mut buf_i32)?;
+        b_tree.no_raiz = i32::from_le_bytes(buf_i32);
+
+        // reads prox_rrn
+        reader.read_exact(&mut buf_i32)?;
+        b_tree.prox_rrn = i32::from_le_bytes(buf_i32);
+
+        // reads nro_nos
+        reader.read_exact(&mut buf_i32)?;
+        b_tree.nro_nos = i32::from_le_bytes(buf_i32);
+
+        Ok(b_tree)
+    }
+
+    pub fn print_btree_header(&mut self) {
+        println!("B-Tree status: {}", self.status);
+        println!("B-Tree no_raiz: {}", self.no_raiz);
+        println!("B-Tree prox_rrn: {}", self.prox_rrn);
+        println!("B-Tree nro_nos: {}", self.nro_nos);
+    }
+
+    fn search_in_page_b_tree(&mut self, mut file_btree_r: &File, cur_node: Node, src_id: i32, f_type: u8) -> Result<u64, io::Error>{
         
-        //let mut b_tree = BTree 
+        for i in 0..cur_node.nro_chaves {
 
-    }
+            println!("{}",i);
 
-    //pub fn initialize_btree(&mut self, f_type: u8) -> Result<Box<Node>, io::Error> {
-    pub fn initialize_btree(&mut self, f_type: u8) -> Result<(), io::Error> {
-        
-//        node = Box::new(Node);
-
-        Ok(())
-
-    }
-}
-
-impl BTree {
-
-    pub fn initialize_btree_header() -> Box<BTree>{
-        let mut b_header = Box::new(BTree{
-                                                    status: 0,
-                                                    no_raiz: -1,
-                                                    prox_rrn: 0,
-                                                    nro_nos: 0
-                                                });
-
-        return b_header
-    }
-
-    pub fn initialize_node (f_type: u8) {
-
-
-
-
-
-    }
-
-    pub fn initialize_btree (file_btree_rw: &File, b_header: &Box<BTree>, new_key: Key, f_type: u8) -> Result<(), io::Error> {
-
-     //   new_root = initialize_node(f_type);
-
-    }
-
-    pub fn add_new_node_btree(file_bin_rw: &File, b_header: &Box<BTree>, id: i32, id_ref: i32, f_type: u8) -> Result<(), io::Error> {
-
-        let new_key = Key {
-                            c: id,
-                            rrn: id_ref,
-                            offset: -1
-                         };
-        
-        /*
-        if b_header.no_raiz == -1 {
-
-            
         }
-        */
 
+        Ok(1)
 
-        Ok(())
     }
-}
 
-
-pub fn write_btree_file_from_bin(file_bin_r: &File, filename_btree: &Path, f_type: u8) -> Result<bool, io::Error> {
-
-    println!("filename_btree: {}", filename_btree.display());
-
-    let file_btree_wr = File::create(filename_btree)?;
-    let mut b_header = initialize_btree_header();
-
-    let mut id: i32 = -1;
-
-    let mut V = records::initialize_vehicle();
-
-    if f_type == 1 { 
+    fn read_node_from_b_tree(&mut self, mut file_btree_r: &File, rrn_b_tree: i32, f_type: u8) -> Result<Option<Node>, io::Error>{
         
-        let header_offset = NODE_SIZE_TYPE1;
-
-        let mut counter = 0;
-        loop {
-            match records::read_id_from_reg_type1(&file_bin_r, &mut id, counter) {
-                
-                Ok(_) => {},
-                Err(e) => break,
-            };
-
-            if id != -1 {
-                add_new_node_btree(&file_bin_r, &b_header, id, counter, f_type); 
-            }
-            counter += 1;
+        if rrn_b_tree == -1{
+            return Ok(None);
         }
+
+        // initializing node
+        let mut node = Node::new();
+
+        // header offset 
+        let mut offset:u64 = NODE_SIZE_TYPE1 as u64;
+        offset += offset*(rrn_b_tree as u64);
+
+        file_btree_r.seek(io::SeekFrom::Start(offset))?;
+        let mut reader = BufReader::new(file_btree_r);
+
+        // creating buffers used for reading
+        let mut buf_c   = [0_u8; 1];
+        let mut buf_i32 = [0_u8; 4];
+        let mut buf_i64 = [0_u8; 8]; // for offset, not used
+
+        // reads tipo_no
+        reader.read_exact(&mut buf_c)?;
+        node.tipo_no = u8::from_le_bytes(buf_c) as char;
+        
+        // reads nro_chaves
+        reader.read_exact(&mut buf_i32)?;
+        node.nro_chaves = i32::from_le_bytes(buf_i32);
+        
+        // reads each key
+        for i in 0..3 {
+            reader.read_exact(&mut buf_i32)?;
+            node.key[i].c = i32::from_le_bytes(buf_i32);
+
+            reader.read_exact(&mut buf_i32)?;
+            node.key[i].rrn = i32::from_le_bytes(buf_i32);
+        }
+
+        // reads each reference for other nodes
+        for i in 0..4 {
+            reader.read_exact(&mut buf_i32)?;
+            node.p[i] = i32::from_le_bytes(buf_i32);
+        }
+
+        self.print_btree_header();
+        node.print();
+
+        Ok(Some(node))
     }
 
-    Ok(true)
-}
-*/
+    pub fn search_index_in_b_tree(&mut self, mut file_bin_r: &File, mut file_btree_r: &File, src_id: i32, f_header: Box<records::FileHeader>, f_type: u8) -> i64 {
 
+        /* TODO
+         *  check these 'unwrap' better later */
+        let node: Node = self.read_node_from_b_tree(file_btree_r, self.no_raiz, f_type).unwrap_or(None).unwrap_or_default();
+
+        let mut ref_offset:i64 = -1;
+
+        self.search_in_page_b_tree(file_btree_r, node, src_id, f_type);
+
+        ref_offset
+    }
+}

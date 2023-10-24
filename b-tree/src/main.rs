@@ -1,4 +1,5 @@
 use std::io;
+use std::str;
 use std::path::Path;
 use std::fs::File;
 
@@ -63,19 +64,29 @@ fn select_from_btree(v_input: Vec<&str>) -> Result<(), io::Error> {
         _ => panic!(),
     };
     let filename_bin = Path::new(v_input[1]);
-    let filename_btree = Path::new(v_input[2]);
     let idx_search = Path::new(v_input[4]); //v_input[3] is "id"
 
-    println!("{} - {} - {} - {}", f_type, filename_bin.display(), filename_btree.display(), idx_search.display());
+    println!("{} - {} - {}", f_type, filename_bin.display(), idx_search.display());
 
     // Opening binary file
     let file_bin_r = File::open(&filename_bin)?;
     let f_header = records::read_header_from_bin(&file_bin_r, f_type)?;
 
-//    println!("{}", f_header);
+    // TODO: Raise error
+    if records::get_status_from_header(&f_header) != '1' {
+        println!("File processing failed.");
+        return Ok(());
+    }
 
-//    println!("{}",records::get_status_from_header(f_header));
+    let filename_btree = Path::new(v_input[2]);
+    let file_btree_r = File::open(&filename_btree)?;
 
+    // How to work with impl properly?
+    let mut b_tree = b_tree::BTree::new(&file_btree_r)?;
+    //b_tree.print_btree_header();
+    
+    let id:i32 = (v_input[4]).parse().unwrap();
+    records::search_reg_in_btree(&file_bin_r, &file_btree_r, id, b_tree, f_header, f_type);
 
     Ok(())
 }

@@ -2,6 +2,8 @@ use std::io::{self, BufReader, Read, Seek};
 use std::fs::File;
 use std::path::Path;
 
+use super::b_tree;
+
 static MAX_RRN: i32 = 97;
 static HEADER_SIZE_TYPE1: i32 = 182;
 
@@ -79,7 +81,7 @@ fn print_vehicle_full(V: Vehicle, f_type: u8) {
 
 }
 
-pub fn get_status_from_header(header: Box<FileHeader>) -> char {
+pub fn get_status_from_header(header: &Box<FileHeader>) -> char {
     return header.status;
 }
 
@@ -322,4 +324,10 @@ pub fn read_all_reg_from_bin(filename_in_bin: &Path, f_type: u8) -> Result<(), i
     };
 
     Ok(())
+}
+
+pub fn search_reg_in_btree(file_bin_r: &File, file_btree_r: &File, id:i32, mut btree: b_tree::BTree, f_header:Box<FileHeader>, f_type:u8) {
+
+    btree.search_index_in_b_tree(file_bin_r, file_btree_r, id, f_header, f_type); 
+    ()
 }
