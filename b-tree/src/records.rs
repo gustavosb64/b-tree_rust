@@ -58,33 +58,34 @@ pub fn initialize_vehicle() -> Vehicle {
     }
 }
 
-fn print_vehicle_full(V: &Vehicle, f_type: u8) {
-    println!("Removido: {}", V.removido);
-    println!("tamanho_registro: {}", V.tamanho_registro);
-    println!("prox_rrn: {}", V.rrn);
-    println!("prox_offset: {}", V.offset);
-    println!("ID: {}", V.id);
-    println!("Ano de fabricação: {}", V.ano);
-    println!("Quantidade de carros: {}", V.qtt);
-    println!("Estado: {}", V.sigla);
-    println!("tam_cidade: {}", V.tam_cidade);
-    println!("Cod5: {}", V.codC5);
-    println!("Cidade: {}", V.cidade);
-    println!("tam_marca: {}", V.tam_marca);
-    println!("Cod6: {}", V.codC6);
-    println!("Marca: {}", V.marca);
-    println!("tam_modelo: {}", V.tam_modelo);
-    println!("Cod7: {}", V.codC7);
-    println!("Modelo: {}", V.modelo);
+fn print_vehicle_full(vehicle: &Vehicle, f_type: u8) {
+    println!("Removido: {}", vehicle.removido);
+    println!("tamanho_registro: {}", vehicle.tamanho_registro);
+    println!("prox_rrn: {}", vehicle.rrn);
+    println!("prox_offset: {}", vehicle.offset);
+    println!("ID: {}", vehicle.id);
+    println!("Ano de fabricação: {}", vehicle.ano);
+    println!("Quantidade de carros: {}", vehicle.qtt);
+    println!("Estado: {}", vehicle.sigla);
+    println!("tam_cidade: {}", vehicle.tam_cidade);
+    println!("Cod5: {}", vehicle.codC5);
+    println!("Cidade: {}", vehicle.cidade);
+    println!("tam_marca: {}", vehicle.tam_marca);
+    println!("Cod6: {}", vehicle.codC6);
+    println!("Marca: {}", vehicle.marca);
+    println!("tam_modelo: {}", vehicle.tam_modelo);
+    println!("Cod7: {}", vehicle.codC7);
+    println!("Modelo: {}", vehicle.modelo);
     println!("");
 }
 
-pub fn print_vehicle(V: &Vehicle, f_type: u8) {
-    println!("MARCA DO VEICULO: {}", V.marca);
-    println!("MODELO DO VEICULO: {}", V.modelo);
-    println!("ANO DE FABRICACAO: {}", V.ano);
-    println!("NOME DA CIDADE: {}", V.cidade);
-    println!("QUANTIDADE DE VEICULOS: {}", V.qtt);
+pub fn print_vehicle(vehicle: &Vehicle, f_type: u8) {
+    println!("MARCA DO VEICULO: {}", vehicle.marca);
+    println!("MODELO DO VEICULO: {}", vehicle.modelo);
+    println!("ANO DE FABRICACAO: {}", vehicle.ano);
+    println!("NOME DA CIDADE: {}", vehicle.cidade);
+    println!("QUANTIDADE DE VEICULOS: {}", vehicle.qtt);
+    println!("");
 }
 
 pub fn get_status_from_header(header: &Box<FileHeader>) -> char {
@@ -167,7 +168,7 @@ pub fn read_id_from_reg_type1(mut file_bin_r: &File, id: &mut i32, rrn: i32) -> 
     Ok(())
 }
 
-pub fn read_reg_from_bin_type1(mut file_bin_r: &File, V: &mut Vehicle, rrn: i32) -> Result<(), io::Error> {
+pub fn read_reg_from_bin_type1(mut file_bin_r: &File, vehicle: &mut Vehicle, rrn: i32) -> Result<(), io::Error> {
 
     // Seek correct position for file pointer
     let pos_to_seek = MAX_RRN*rrn + HEADER_SIZE_TYPE1;
@@ -186,31 +187,31 @@ pub fn read_reg_from_bin_type1(mut file_bin_r: &File, V: &mut Vehicle, rrn: i32)
 
     // Reads 'removido'
     reader.read_exact(&mut buf_c)?;
-    V.removido = u8::from_le_bytes(buf_c) as char;
-    if V.removido == '1'{
+    vehicle.removido = u8::from_le_bytes(buf_c) as char;
+    if vehicle.removido == '1'{
         return Ok(()); // if the register is removed, return
     }
 
     // Reads 'rrn'
     reader.read_exact(&mut buf_i32)?;
-    V.rrn = i32::from_le_bytes(buf_i32);
+    vehicle.rrn = i32::from_le_bytes(buf_i32);
 
     // Reads 'id'
     reader.read_exact(&mut buf_i32)?;
-    V.id = i32::from_le_bytes(buf_i32);
+    vehicle.id = i32::from_le_bytes(buf_i32);
 
     // Reads 'ano'
     reader.read_exact(&mut buf_i32)?;
-    V.ano = i32::from_le_bytes(buf_i32);
+    vehicle.ano = i32::from_le_bytes(buf_i32);
 
     // Reads 'qtt'
     reader.read_exact(&mut buf_i32)?;
-    V.qtt = i32::from_le_bytes(buf_i32);
+    vehicle.qtt = i32::from_le_bytes(buf_i32);
 
     // Reads 'sigla'
     reader.read_exact(&mut buf_c_2)?;
     match std::str::from_utf8(&buf_c_2){
-        Ok(string) => V.sigla = string.to_string(),
+        Ok(string) => vehicle.sigla = string.to_string(),
         Err(e) => return Ok(())
     };
     
@@ -233,56 +234,56 @@ pub fn read_reg_from_bin_type1(mut file_bin_r: &File, V: &mut Vehicle, rrn: i32)
             
             '0' => {
                 reader.read_exact(&mut buf_i32)?;
-                V.tam_cidade = i32::from_le_bytes(buf_i32); 
+                vehicle.tam_cidade = i32::from_le_bytes(buf_i32); 
 
                 reader.read_exact(&mut buf_c)?;
-                V.codC5 = u8::from_le_bytes(buf_c) as char; 
+                vehicle.codC5 = u8::from_le_bytes(buf_c) as char; 
 
                 // Reads 'cidade'
-                buf_string = vec![0; V.tam_cidade as usize];
+                buf_string = vec![0; vehicle.tam_cidade as usize];
                 reader.read_exact(&mut buf_string)?;
                 match std::str::from_utf8(&buf_string){
-                    Ok(string) => V.cidade = string.to_string(),
+                    Ok(string) => vehicle.cidade = string.to_string(),
                     Err(e) => return Ok(())
                 }
 
-                byte_counter += 1 + 4 + (V.cidade.len() as i32);
+                byte_counter += 1 + 4 + (vehicle.cidade.len() as i32);
             },
 
             '1' => {
                 reader.read_exact(&mut buf_i32)?;
-                V.tam_marca = i32::from_le_bytes(buf_i32); 
+                vehicle.tam_marca = i32::from_le_bytes(buf_i32); 
 
                 reader.read_exact(&mut buf_c)?;
-                V.codC6 = u8::from_le_bytes(buf_c) as char; 
+                vehicle.codC6 = u8::from_le_bytes(buf_c) as char; 
 
                 // Reads 'cidade'
-                buf_string = vec![0; V.tam_marca as usize];
+                buf_string = vec![0; vehicle.tam_marca as usize];
                 reader.read_exact(&mut buf_string)?;
                 match std::str::from_utf8(&buf_string){
-                    Ok(string) => V.marca = string.to_string(),
+                    Ok(string) => vehicle.marca = string.to_string(),
                     Err(e) => return Ok(())
                 }
 
-                byte_counter += 1 + 4 + (V.marca.len() as i32);
+                byte_counter += 1 + 4 + (vehicle.marca.len() as i32);
             },
 
             '2' => {
                 reader.read_exact(&mut buf_i32)?;
-                V.tam_modelo = i32::from_le_bytes(buf_i32); 
+                vehicle.tam_modelo = i32::from_le_bytes(buf_i32); 
 
                 reader.read_exact(&mut buf_c)?;
-                V.codC7 = u8::from_le_bytes(buf_c) as char; 
+                vehicle.codC7 = u8::from_le_bytes(buf_c) as char; 
 
                 // Reads 'cidade'
-                buf_string = vec![0; V.tam_modelo as usize];
+                buf_string = vec![0; vehicle.tam_modelo as usize];
                 reader.read_exact(&mut buf_string)?;
                 match std::str::from_utf8(&buf_string){
-                    Ok(string) => V.modelo = string.to_string(),
+                    Ok(string) => vehicle.modelo = string.to_string(),
                     Err(e) => return Ok(())
                 }
 
-                byte_counter += 1 + 4 + (V.modelo.len() as i32);
+                byte_counter += 1 + 4 + (vehicle.modelo.len() as i32);
             },
 
             _ => (),
@@ -292,20 +293,6 @@ pub fn read_reg_from_bin_type1(mut file_bin_r: &File, V: &mut Vehicle, rrn: i32)
 
     };
 
-    /*
-    println!("removido: {}", V.removido as char);
-    println!("prox_rrn: {}", V.rrn as i32);
-    println!("id: {}", V.id as i32);
-    println!("ano: {}", V.ano as i32);
-    println!("qtt: {}", V.qtt);
-    println!("sigla: {}", V.sigla);
-    println!("cidade: {}", V.cidade);
-    println!("marca: {}", V.marca);
-    println!("modelo: {}", V.modelo);
-    println!("");
-    */
-
-
     Ok(())
 
 }
@@ -314,12 +301,12 @@ pub fn read_all_reg_from_bin(filename_in_bin: &Path, f_type: u8) -> Result<(), i
     
     let mut file_bin_r = File::open(filename_in_bin)?;
 
-    let mut V = initialize_vehicle();
+    let mut vehicle = initialize_vehicle();
 
     if f_type == 1 {
         let mut rrn = 0;
         loop {
-            match read_reg_from_bin_type1(&file_bin_r, &mut V, rrn) {
+            match read_reg_from_bin_type1(&file_bin_r, &mut vehicle, rrn) {
                 Ok(_) => {},
                 Err(e) => break,
             };
@@ -333,18 +320,31 @@ pub fn read_all_reg_from_bin(filename_in_bin: &Path, f_type: u8) -> Result<(), i
 
 pub fn search_reg_in_btree(file_bin_r: &File, file_btree_r: &File, id:i32, mut btree: b_tree::BTree, f_header:Box<FileHeader>, f_type:u8) -> i32{
 
-    let ref_rrn: i32 = btree.search_index_in_b_tree(file_bin_r, file_btree_r, id, f_header, f_type); 
+    let ref_rrn: i32 = btree.search_index_in_b_tree(file_bin_r, file_btree_r, id, &f_header, f_type); 
 
     if ref_rrn == -1 {
-        println!("Registro inexistente");
+        println!("Registro inexistente.");
         return 1;
     }
 
-    let mut V = initialize_vehicle();
-    
-    read_reg_from_bin_type1(file_bin_r, &mut V, ref_rrn);
-
-    print_vehicle(&V, f_type);
+    let mut vehicle = initialize_vehicle();
+    let _ = read_reg_from_bin_type1(file_bin_r, &mut vehicle, ref_rrn);
+    print_vehicle(&vehicle, f_type);
 
     return 0;
+}
+
+pub fn add_new_reg_using_btree(file_bin_rw: &File, file_btree_rw: &File, f_type: u8, f_header: &Box<FileHeader>, mut btree: b_tree::BTree, id: i32, ano: i32, qtt: i32, sigla: String, cidade: String, marca: String, modelo: String) -> i32 {
+    
+    let mut i_id = id;
+    let i_f_type = f_type;
+
+    // check if the record doesn't already exists
+    let mut ref_rrn: i32 = btree.search_index_in_b_tree(file_bin_rw, file_btree_rw, i_id, f_header, i_f_type);
+    if ref_rrn != -1 {
+        return -1; 
+    }
+    
+    ()
+
 }

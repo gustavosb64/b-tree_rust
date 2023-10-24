@@ -85,7 +85,7 @@ impl Node {
 
 impl BTree {
 
-    pub fn new(mut file_btree_r: &File) -> Result<BTree, io::Error> {
+    pub fn new(mut file_btree_r: &File) -> Result<Self, io::Error> {
         let mut b_tree = BTree{ 
                                 status: '1',
                                 no_raiz: -1,
@@ -118,6 +118,10 @@ impl BTree {
         b_tree.nro_nos = i32::from_le_bytes(buf_i32);
 
         Ok(b_tree)
+    }
+
+    pub fn get_status_from_btree(&mut self) -> char {
+        self.status
     }
 
     pub fn print_btree_header(&mut self) {
@@ -218,7 +222,7 @@ impl BTree {
         Ok(Some(node))
     }
 
-    pub fn search_index_in_b_tree(&mut self, mut file_bin_r: &File, mut file_btree_r: &File, src_id: i32, f_header: Box<records::FileHeader>, f_type: u8) -> i32 {
+    pub fn search_index_in_b_tree(&mut self, mut file_bin_r: &File, mut file_btree_r: &File, src_id: i32, f_header: &Box<records::FileHeader>, f_type: u8) -> i32 {
 
         /* TODO
          *  check these 'unwrap' better later */
