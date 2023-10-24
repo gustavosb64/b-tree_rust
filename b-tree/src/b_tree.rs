@@ -127,15 +127,47 @@ impl BTree {
         println!("B-Tree nro_nos: {}", self.nro_nos);
     }
 
-    fn search_in_page_b_tree(&mut self, mut file_btree_r: &File, cur_node: Node, src_id: i32, f_type: u8) -> Result<u64, io::Error>{
+    fn search_in_page_b_tree(&mut self, mut file_btree_r: &File, cur_node: Node, src_id: i32, f_type: u8) -> Result<i32, io::Error>{
         
         for i in 0..cur_node.nro_chaves {
 
-            println!("{}",i);
+            let idx: usize = i as usize;
+            
+            // if current key is equal to the ID we are searching for, it
+            // returns its reference
+            if cur_node.key[idx].c == src_id {
+                let mut Pr: i32 = -1;
+                
+                if f_type == 1 { 
+                    Pr = cur_node.key[idx].rrn;
+                }
+                return Ok(Pr);
+            }
+            
+            // if current key is larger than the ID we are searching for, 
+            // the search is continued to the left of the key 
+            if cur_node.key[idx].c > src_id {
 
+                let mut new_node: Node = match self.read_node_from_b_tree(file_btree_r, cur_node.p[idx], f_type) {
+                    Ok(Some(node)) => node,
+                    Ok(None) => return Ok(-1),
+                    Err(e) => return Err(e),
+                };
+
+                return self.search_in_page_b_tree(file_btree_r, new_node, src_id, f_type);
+            }
         }
 
-        Ok(1)
+        // if the current key is neither smaller nor equal to the ID we
+        // are searching for, the search continues to the right of the
+        // current key (values larger than the key)
+        let mut new_node: Node = match self.read_node_from_b_tree(file_btree_r, cur_node.p[cur_node.nro_chaves as usize], f_type) {
+            Ok(Some(node)) => node,
+            Ok(None) => return Ok(-1),
+            Err(e) => return Err(e),
+        };
+
+        return self.search_in_page_b_tree(file_btree_r, new_node, src_id, f_type);
 
     }
 
@@ -183,21 +215,19 @@ impl BTree {
             node.p[i] = i32::from_le_bytes(buf_i32);
         }
 
-        self.print_btree_header();
-        node.print();
-
         Ok(Some(node))
     }
 
-    pub fn search_index_in_b_tree(&mut self, mut file_bin_r: &File, mut file_btree_r: &File, src_id: i32, f_header: Box<records::FileHeader>, f_type: u8) -> i64 {
+    pub fn search_index_in_b_tree(&mut self, mut file_bin_r: &File, mut file_btree_r: &File, src_id: i32, f_header: Box<records::FileHeader>, f_type: u8) -> i32 {
 
         /* TODO
          *  check these 'unwrap' better later */
-        let node: Node = self.read_node_from_b_tree(file_btree_r, self.no_raiz, f_type).unwrap_or(None).unwrap_or_default();
+        let mut node: Node = self.read_node_from_b_tree(file_btree_r, self.no_raiz, f_type).unwrap_or(None).unwrap_or_default();
 
-        let mut ref_offset:i64 = -1;
-
-        self.search_in_page_b_tree(file_btree_r, node, src_id, f_type);
+        let mut ref_offset: i32 = match self.search_in_page_b_tree(file_btree_r, node, src_id, f_type) { 
+            Ok(offset) => offset,
+            Err(e) => -1,
+        };
 
         ref_offset
     }

@@ -86,7 +86,7 @@ fn select_from_btree(v_input: Vec<&str>) -> Result<(), io::Error> {
     //b_tree.print_btree_header();
     
     let id:i32 = (v_input[4]).parse().unwrap();
-    records::search_reg_in_btree(&file_bin_r, &file_btree_r, id, b_tree, f_header, f_type);
+    let ret: i32 = records::search_reg_in_btree(&file_bin_r, &file_btree_r, id, b_tree, f_header, f_type);
 
     Ok(())
 }

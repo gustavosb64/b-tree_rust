@@ -58,8 +58,7 @@ pub fn initialize_vehicle() -> Vehicle {
     }
 }
 
-fn print_vehicle_full(V: Vehicle, f_type: u8) {
-
+fn print_vehicle_full(V: &Vehicle, f_type: u8) {
     println!("Removido: {}", V.removido);
     println!("tamanho_registro: {}", V.tamanho_registro);
     println!("prox_rrn: {}", V.rrn);
@@ -78,7 +77,14 @@ fn print_vehicle_full(V: Vehicle, f_type: u8) {
     println!("Cod7: {}", V.codC7);
     println!("Modelo: {}", V.modelo);
     println!("");
+}
 
+pub fn print_vehicle(V: &Vehicle, f_type: u8) {
+    println!("MARCA DO VEICULO: {}", V.marca);
+    println!("MODELO DO VEICULO: {}", V.modelo);
+    println!("ANO DE FABRICACAO: {}", V.ano);
+    println!("NOME DA CIDADE: {}", V.cidade);
+    println!("QUANTIDADE DE VEICULOS: {}", V.qtt);
 }
 
 pub fn get_status_from_header(header: &Box<FileHeader>) -> char {
@@ -285,10 +291,8 @@ pub fn read_reg_from_bin_type1(mut file_bin_r: &File, V: &mut Vehicle, rrn: i32)
             
 
     };
-    /*
-    */
-        
 
+    /*
     println!("removido: {}", V.removido as char);
     println!("prox_rrn: {}", V.rrn as i32);
     println!("id: {}", V.id as i32);
@@ -299,6 +303,7 @@ pub fn read_reg_from_bin_type1(mut file_bin_r: &File, V: &mut Vehicle, rrn: i32)
     println!("marca: {}", V.marca);
     println!("modelo: {}", V.modelo);
     println!("");
+    */
 
 
     Ok(())
@@ -326,8 +331,20 @@ pub fn read_all_reg_from_bin(filename_in_bin: &Path, f_type: u8) -> Result<(), i
     Ok(())
 }
 
-pub fn search_reg_in_btree(file_bin_r: &File, file_btree_r: &File, id:i32, mut btree: b_tree::BTree, f_header:Box<FileHeader>, f_type:u8) {
+pub fn search_reg_in_btree(file_bin_r: &File, file_btree_r: &File, id:i32, mut btree: b_tree::BTree, f_header:Box<FileHeader>, f_type:u8) -> i32{
 
-    btree.search_index_in_b_tree(file_bin_r, file_btree_r, id, f_header, f_type); 
-    ()
+    let ref_rrn: i32 = btree.search_index_in_b_tree(file_bin_r, file_btree_r, id, f_header, f_type); 
+
+    if ref_rrn == -1 {
+        println!("Registro inexistente");
+        return 1;
+    }
+
+    let mut V = initialize_vehicle();
+    
+    read_reg_from_bin_type1(file_bin_r, &mut V, ref_rrn);
+
+    print_vehicle(&V, f_type);
+
+    return 0;
 }
