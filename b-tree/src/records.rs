@@ -1,4 +1,4 @@
-use std::io::{self, BufReader, Read, Seek};
+use std::io::{self, BufReader, Read, Seek, Write};
 use std::fs::File;
 use std::path::Path;
 
@@ -318,6 +318,75 @@ pub fn read_all_reg_from_bin(filename_in_bin: &Path, f_type: u8) -> Result<(), i
     Ok(())
 }
 
+pub fn initialize_reg_type1(mut file_bin_w: &File) -> Result<(), io::Error> {
+    /* TODO
+     *  How to properly reference to MAX_RRN?
+     */
+    const arr_len: usize = 97;
+    let arr_c: [char; arr_len as usize] = ['$'; arr_len as usize];
+    
+    for value in arr_c {
+        write!(file_bin_w, "{}", &value)?;
+    }
+
+    Ok(())
+}
+
+pub fn  write_reg_in_bin_type1(file_bin_w: &File, vehicle: &Vehicle) {
+
+    initialize_reg_type1(file_bin_w);
+
+
+}
+
+pub fn add_new_reg_type1(mut file_bin_rw: &File, vehicle: Vehicle, rrn: &mut i32, f_header: &mut Box<FileHeader>) -> Result<i32, io::Error>{ 
+    
+    let mut flag_stack: u8 = 0; // tells whether there were space reuse
+    
+    if f_header.rrn == -1 {
+        *rrn = f_header.prox_rrn;
+    }
+    else { 
+        *rrn = f_header.rrn;
+        flag_stack = 1;
+    };
+
+    let mut ref_offset: i32 = (*rrn)*MAX_RRN + HEADER_SIZE_TYPE1;
+    file_bin_rw.seek(io::SeekFrom::Start(ref_offset as u64))?;
+
+    // Creates buffers for reading
+    let mut buf_c = [0_u8; 1];
+    let mut buf_i32 = [0_u8; 4];
+
+    let mut reader = BufReader::new(file_bin_rw);
+
+    if flag_stack != 0 {
+        let mut is_removed: char = '0';
+        let mut new_stack_top: i32 = -1;
+        
+        // if the record doesn't is marked as removed, returns
+        reader.read_exact(&mut buf_c)?;
+        is_removed = u8::from_le_bytes(buf_c) as char;
+        if is_removed != '1' {
+            return Ok(-1);
+        }
+
+        reader.read_exact(&mut buf_i32)?;
+        new_stack_top = i32::from_le_bytes(buf_i32);
+        
+        (*f_header).rrn = new_stack_top;
+        (*f_header).nro_reg_rem = f_header.nro_reg_rem - 1;
+
+        // Returns pointer to the start of the record
+        // necessary for the write function
+        file_bin_rw.seek(io::SeekFrom::Start(ref_offset as u64))?;
+    }
+
+    write_reg_in_bin_type1(file_bin_rw, &vehicle);
+
+    Ok(0)
+}
+
 pub fn search_reg_in_btree(file_bin_r: &File, file_btree_r: &File, id:i32, mut btree: b_tree::BTree, f_header:Box<FileHeader>, f_type:u8) -> i32{
 
     let ref_rrn: i32 = btree.search_index_in_b_tree(file_bin_r, file_btree_r, id, &f_header, f_type); 
@@ -334,17 +403,31 @@ pub fn search_reg_in_btree(file_bin_r: &File, file_btree_r: &File, id:i32, mut b
     return 0;
 }
 
-pub fn add_new_reg_using_btree(file_bin_rw: &File, file_btree_rw: &File, f_type: u8, f_header: &Box<FileHeader>, mut btree: b_tree::BTree, id: i32, ano: i32, qtt: i32, sigla: String, cidade: String, marca: String, modelo: String) -> i32 {
+pub fn add_new_reg_using_btree(file_bin_rw: &File, file_btree_rw: &File, f_type: u8, f_header: &mut Box<FileHeader>, mut btree: b_tree::BTree, id: i32, ano: i32, qtt: i32, sigla: String, cidade: String, marca: String, modelo: String) -> i32 {
     
-    let mut i_id = id;
     let i_f_type = f_type;
 
     // check if the record doesn't already exists
-    let mut ref_rrn: i32 = btree.search_index_in_b_tree(file_bin_rw, file_btree_rw, i_id, f_header, i_f_type);
+    let mut ref_rrn: i32 = btree.search_index_in_b_tree(file_bin_rw, file_btree_rw, id, f_header, i_f_type);
     if ref_rrn != -1 {
         return -1; 
     }
+
+    let mut vehicle = initialize_vehicle();
+
+    vehicle.id = id;
+    vehicle.ano = ano;
+    vehicle.qtt = qtt;
+    vehicle.sigla = sigla;
+    vehicle.cidade = cidade;
+    vehicle.marca = marca;
+    vehicle.modelo = modelo;
+
+    if f_type == 1 {
+        let rrn: i32 = -1;
+        add_new_reg_type1(file_bin_rw, vehicle, &mut ref_rrn, f_header);
+    }
     
-    ()
+    return 0
 
 }

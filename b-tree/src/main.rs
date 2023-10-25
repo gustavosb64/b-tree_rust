@@ -1,7 +1,7 @@
 use std::io;
 use std::str;
 use std::path::Path;
-use std::fs::File;
+use std::fs::{File, OpenOptions};
 
 mod b_tree;
 mod records;
@@ -108,8 +108,12 @@ fn insert_using_btree(v_input: Vec<&str>) -> Result<(), io::Error> {
 
     println!("{} - {} - {} - {}", f_type, filename_bin.display(), filename_btree.display(), n_insertions);
 
-    let f_bin_rw = File::open(&filename_bin)?;
-    let f_header = records::read_header_from_bin(&f_bin_rw, f_type)?;
+    let mut f_bin_rw = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .open(filename_bin)?;
+    let mut f_header = records::read_header_from_bin(&f_bin_rw, f_type)?;
 
     // TODO: Raise error
     if records::get_status_from_header(&f_header) != '1' {
@@ -122,7 +126,11 @@ fn insert_using_btree(v_input: Vec<&str>) -> Result<(), io::Error> {
     */
      
 
-    let f_btree_rw = File::open(&filename_btree)?;
+    let mut f_btree_rw = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .open(filename_btree)?;
     let mut btree = b_tree::BTree::new(&f_btree_rw)?;
     if btree.get_status_from_btree() != '1' {
         println!("File processing failed.");
@@ -146,9 +154,18 @@ fn insert_using_btree(v_input: Vec<&str>) -> Result<(), io::Error> {
     let mut modelo: String = "".to_string();
 
     for i in 0..n_insertions {
-        id  = (v_search_input[0]).parse().unwrap();
-        ano = (v_search_input[1]).parse().unwrap();
-        qtt = (v_search_input[2]).parse().unwrap();
+        if v_search_input[0] != "NULO" {
+            id  = (v_search_input[0]).parse().unwrap();
+        }
+        else { id = -1 };
+        if v_search_input[1] != "NULO" {
+            ano = (v_search_input[1]).parse().unwrap();
+        }
+        else { ano = -1 };
+        if v_search_input[2] != "NULO" {
+            qtt = (v_search_input[2]).parse().unwrap();
+        }
+        else { qtt = -1 };
         sigla  = String::from(v_search_input[3].trim_matches('"'));
         cidade = String::from(v_search_input[4].trim_matches('"'));
         marca  = String::from(v_search_input[5].trim_matches('"'));
@@ -158,7 +175,7 @@ fn insert_using_btree(v_input: Vec<&str>) -> Result<(), io::Error> {
     println!("{} - {} - {} - {} - {} - {} - {}", 
                id, ano, qtt, sigla, cidade, marca, modelo);
 
-    records::add_new_reg_using_btree(&f_bin_rw, &f_btree_rw, f_type, &f_header, btree, id, ano, qtt, sigla, cidade, marca, modelo);
+    records::add_new_reg_using_btree(&f_bin_rw, &f_btree_rw, f_type, &mut f_header, btree, id, ano, qtt, sigla, cidade, marca, modelo);
     Ok(())
 }
 
