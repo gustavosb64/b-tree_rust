@@ -47,13 +47,13 @@ pub fn initialize_vehicle() -> Vehicle {
         qtt: -1,
         sigla: "".to_string(),
         tam_cidade: 0,
-        codC5: 'I',
+        codC5: '0',
         cidade: "".to_string(),
         tam_marca: 0,
-        codC6: 'I',
+        codC6: '1',
         marca: "".to_string(),
         tam_modelo: 0,
-        codC7: 'I',
+        codC7: '2',
         modelo: "".to_string(),
     }
 }
@@ -329,17 +329,79 @@ pub fn initialize_reg_type1(mut file_bin_w: &File) -> Result<(), io::Error> {
         write!(file_bin_w, "{}", &value)?;
     }
 
+    // returns file pointer to the start of the record
+    file_bin_w.seek(io::SeekFrom::Current(-MAX_RRN as i64))?;
+
     Ok(())
 }
 
-pub fn  write_reg_in_bin_type1(file_bin_w: &File, vehicle: &Vehicle) {
+pub fn write_reg_in_bin_type1(mut file_bin_w: &File, vehicle: &mut Vehicle) -> Result<(), io::Error> {
 
     initialize_reg_type1(file_bin_w);
 
+    print_vehicle_full(&vehicle, 1);
 
+    let mut offset: i32 = 0;
+    
+    if (*vehicle).cidade != "" {
+        (*vehicle).tam_cidade = (*vehicle).cidade.len() as i32;
+        offset += 4 + 1 + (*vehicle).tam_cidade;
+    }
+    if (*vehicle).marca != "" {
+        (*vehicle).tam_marca = (*vehicle).marca.len() as i32;
+        offset += 4 + 1 + (*vehicle).tam_marca;
+    }
+    if (*vehicle).modelo != "" {
+        (*vehicle).tam_modelo = (*vehicle).modelo.len() as i32;
+        offset += 4 + 1 + (*vehicle).tam_modelo;
+    }
+
+    let mut buf_i32: [u8; 4];
+
+    // write data
+    write!(file_bin_w, "{}", (*vehicle).removido)?;
+
+    buf_i32 = (*vehicle).rrn.to_le_bytes();
+    file_bin_w.write_all(&buf_i32)?;
+
+    buf_i32 = (*vehicle).id.to_le_bytes();
+    file_bin_w.write_all(&buf_i32)?;
+
+    buf_i32 = (*vehicle).ano.to_le_bytes();
+    file_bin_w.write_all(&buf_i32)?;
+
+    buf_i32 = (*vehicle).qtt.to_le_bytes();
+    file_bin_w.write_all(&buf_i32)?;
+
+    write!(file_bin_w, "{}", (*vehicle).sigla)?;
+
+    offset += 1 + 4*4 + 2*1; //sizeof(char)+ 4*sizeof(int) + 2*sizeof(char)
+    if vehicle.tam_cidade > 0 {
+        buf_i32 = (*vehicle).tam_cidade.to_le_bytes();
+        file_bin_w.write_all(&buf_i32)?;
+        write!(file_bin_w, "{}", (*vehicle).codC5)?;
+        write!(file_bin_w, "{}", (*vehicle).cidade)?;
+    }
+    if vehicle.tam_marca > 0 {
+        buf_i32 = (*vehicle).tam_marca.to_le_bytes();
+        file_bin_w.write_all(&buf_i32)?;
+        write!(file_bin_w, "{}", (*vehicle).codC6)?;
+        write!(file_bin_w, "{}", (*vehicle).marca)?;
+    }
+    if vehicle.tam_modelo > 0 {
+        buf_i32 = (*vehicle).tam_modelo.to_le_bytes();
+        file_bin_w.write_all(&buf_i32)?;
+        write!(file_bin_w, "{}", (*vehicle).codC7)?;
+        write!(file_bin_w, "{}", (*vehicle).modelo)?;
+    }
+
+    offset = MAX_RRN - offset;
+    file_bin_w.seek(io::SeekFrom::Current(offset as i64))?;
+
+    Ok(())
 }
 
-pub fn add_new_reg_type1(mut file_bin_rw: &File, vehicle: Vehicle, rrn: &mut i32, f_header: &mut Box<FileHeader>) -> Result<i32, io::Error>{ 
+pub fn add_new_reg_type1(mut file_bin_rw: &File, mut vehicle: Vehicle, rrn: &mut i32, f_header: &mut Box<FileHeader>) -> Result<i32, io::Error>{ 
     
     let mut flag_stack: u8 = 0; // tells whether there were space reuse
     
@@ -382,7 +444,7 @@ pub fn add_new_reg_type1(mut file_bin_rw: &File, vehicle: Vehicle, rrn: &mut i32
         file_bin_rw.seek(io::SeekFrom::Start(ref_offset as u64))?;
     }
 
-    write_reg_in_bin_type1(file_bin_rw, &vehicle);
+    write_reg_in_bin_type1(file_bin_rw, &mut vehicle);
 
     Ok(0)
 }
@@ -418,10 +480,22 @@ pub fn add_new_reg_using_btree(file_bin_rw: &File, file_btree_rw: &File, f_type:
     vehicle.id = id;
     vehicle.ano = ano;
     vehicle.qtt = qtt;
-    vehicle.sigla = sigla;
-    vehicle.cidade = cidade;
-    vehicle.marca = marca;
-    vehicle.modelo = modelo;
+    if sigla == "NULO" {
+        vehicle.sigla = "$$".to_string();
+    }
+    else { vehicle.sigla = sigla };
+    if cidade == "NULO" {
+        vehicle.cidade = "".to_string();
+    }
+    else { vehicle.cidade = cidade };
+    if marca == "NULO" {
+        vehicle.marca = "".to_string();
+    }
+    else { vehicle.marca = marca };
+    if modelo == "NULO" {
+        vehicle.modelo = "".to_string();
+    }
+    else { vehicle.modelo = modelo };
 
     if f_type == 1 {
         let rrn: i32 = -1;
