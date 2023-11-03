@@ -499,7 +499,8 @@ pub fn add_new_reg_using_btree(file_bin_rw: &File, file_btree_rw: &File, f_type:
 
     if f_type == 1 {
         let rrn: i32 = -1;
-        add_new_reg_type1(file_bin_rw, vehicle, &mut ref_rrn, f_header);
+        //add_new_reg_type1(file_bin_rw, vehicle, &mut rrn, f_header);
+        btree.add_new_node_btree(file_bin_rw, vehicle.id, rrn, f_type);
     }
     
     return 0

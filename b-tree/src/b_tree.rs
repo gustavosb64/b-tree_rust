@@ -1,8 +1,10 @@
 use std::fs::File;
 use std::path::Path;
-use std::io::{self, BufReader, Read, Seek};
+use std::io::{self, BufReader, Read, Seek, Write};
 
 static NODE_SIZE_TYPE1: i32 = 45;
+static NODE_SIZE_TYPE2: i32 = 57;
+static MAX_NUM_KEYS: i32 = 3;
 
 /* DOESN'T WORK:
  * mod records; */
@@ -81,6 +83,69 @@ impl Node {
         println!("P: {:?}", self.p);
         println!("----------------------------");
     }
+
+    fn insert_new_id(&mut self, new_key: Key) {
+
+        let new_idx = self.nro_chaves;
+        self.key[new_idx as usize] = new_key;
+        self.nro_chaves += 1;
+
+        let mut aux_key = Key::new();
+
+        for i in 0..self.nro_chaves {
+            let v = self.key[i as usize].c;
+            aux_key = self.key[i as usize];
+
+            let mut j = i-1;
+            for _ in (0..i).rev() {
+                if self.key[j as usize].c <= v { break; }
+                self.key[(j+1) as usize] = self.key[j as usize];
+                j -= 1;
+            }
+            self.key[(j+1) as usize] = aux_key;
+        }
+    }
+
+    fn write_node_in_btree_file(&mut self, mut file_btree_rw: &File, rrn: i32, f_type: u8) -> Result<(), io::Error>{
+
+        let mut node_size: i32;
+
+        if f_type == 1 { node_size = NODE_SIZE_TYPE1 }
+        else { node_size = NODE_SIZE_TYPE1 }; // change to type2 if needed
+
+        let mut offset = (rrn*node_size) + node_size;
+        file_btree_rw.seek(io::SeekFrom::Start(offset as u64))?;
+
+        let mut buf_i32: [u8; 4];
+
+        // writing node data in file
+        
+        write!(file_btree_rw, "{}", self.tipo_no)?;
+
+        buf_i32 = self.nro_chaves.to_le_bytes();
+        file_btree_rw.write_all(&buf_i32)?;  
+
+        for i in 0..MAX_NUM_KEYS {
+
+            buf_i32 = self.key[i as usize].c.to_le_bytes();
+            file_btree_rw.write_all(&buf_i32)?;
+
+            //change if needed
+            if f_type == 1 { 
+                buf_i32 = self.key[i as usize].rrn.to_le_bytes();
+            }
+            else { buf_i32 = self.key[i as usize].rrn.to_le_bytes() }; 
+            file_btree_rw.write_all(&buf_i32)?;
+        };
+
+        for i in 0..4 {
+            buf_i32 = self.p[i as usize].to_le_bytes();
+            file_btree_rw.write_all(&buf_i32)?;
+        }
+
+        Ok(())
+    }
+
 }
 
 impl BTree {
@@ -118,6 +183,17 @@ impl BTree {
         b_tree.nro_nos = i32::from_le_bytes(buf_i32);
 
         Ok(b_tree)
+    }
+
+    fn initialize_btree(&mut self, mut file_btree_rw: &File, new_key: Key, f_type: u8) {
+
+        let mut new_root = Node::new();
+
+        new_root.insert_new_id(new_key);
+        new_root.tipo_no = '0';
+
+        new_root.write_node_in_btree_file(file_btree_rw, self.prox_rrn, f_type);
+        
     }
 
     pub fn get_status_from_btree(&mut self) -> char {
@@ -173,6 +249,68 @@ impl BTree {
 
         return self.search_in_page_b_tree(file_btree_r, new_node, src_id, f_type);
 
+    }
+
+    fn read_node_from_btree(&mut self, mut file_btree_r: &File, rrn_b_tree: i32, f_type: u8) -> Result<Option<Node>, io::Error> {
+
+        if rrn_b_tree == -1 {
+            return Ok(None);
+        }
+
+        let mut offset = match f_type{
+            1 => NODE_SIZE_TYPE1,
+            2 => NODE_SIZE_TYPE2,
+            _ => return Ok(None),
+        };
+        offset += offset*rrn_b_tree;
+
+        file_btree_r.seek(io::SeekFrom::Start(offset as u64))?;
+
+
+        Ok(None)
+    }
+
+    fn insert_btree(&mut self, file_btree_rw: &File, new_key: Key, cur_rrn_btree: i32, f_type: u8, promo_key: &mut Key, promo_r_child: &mut i32, recursion_counter: i32) -> Result<i32, io::Error> {
+
+        println!("insert_btree");
+
+        // if cur_rrn is invalid, returns
+        if cur_rrn_btree == -1 {
+            return Ok(-2);
+        }
+
+        //let mut cur_node: Node = read_node_from_btree();
+
+
+
+        Ok(0)
+    }
+
+    pub fn add_new_node_btree(&mut self, file_btree_rw: &File, id: i32, id_ref: i32, f_type: u8) -> Result<i32, io::Error>{
+        
+        //println!("add_new_node_btree");
+        
+        let mut new_key = Key::new();
+        new_key.c = id;
+        if f_type == 1 { 
+            new_key.rrn = id_ref;
+        }
+
+        if self.no_raiz == -1 {
+            self.initialize_btree(file_btree_rw, new_key, f_type);
+            return Ok(0);
+        }
+
+        let mut promo_key: Key = Key::new();
+        let mut promo_r_child: i32 = -1;
+        let mut recursion_counter: i32 = 0;
+
+        let insertion_return = match self.insert_btree(file_btree_rw, new_key, self.no_raiz, f_type, &mut promo_key, &mut promo_r_child, recursion_counter+1){
+            Ok(v) => v,
+            Err(e) => return Err(e),
+        };
+
+        Ok(0)
     }
 
     fn read_node_from_b_tree(&mut self, mut file_btree_r: &File, rrn_b_tree: i32, f_type: u8) -> Result<Option<Node>, io::Error>{
